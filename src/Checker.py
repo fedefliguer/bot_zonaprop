@@ -44,6 +44,12 @@ class Checker:
 
     def check_elevator_and_floor(self):
         """Chequea si el departamento tiene ascensor y está en un piso superior al 4to."""
+        description_text = self.data.get("description", "").lower()
+        
+        if "por escalera" in description_text:
+            self._check_condition(False, "Ascensor y piso", "Es por escalera.")
+            return
+
         general_features = self.data.get("general_features", {})
         has_elevator = False
         if "Servicios" in general_features:
@@ -52,7 +58,6 @@ class Checker:
                     has_elevator = True
                     break
         
-        description_text = self.data.get("description", "").lower()
         if "ascensor" in description_text:
             has_elevator = True
 
@@ -199,17 +204,23 @@ class Checker:
             self._check_condition(True, "No está en una avenida", f"La dirección {address} no está en una avenida.")
 
     def check_orientation(self):
-        """Chequea la orientación del inmueble."""
+        """Chequea la orientación del inmueble y añade información sobre la luminosidad."""
         orientation = self.data.get("main_features", {}).get("1000029", {}).get("value")
         
+        explanation = "No se pudo determinar la orientación."
+        condition = None
+
         if orientation in self.orientacion_check:
-            self._check_condition(True, "Orientación", f"Orientación {orientation}, buena luminosidad.")
+            condition = True
+            explanation = f"Orientación {orientation} ☀️. Es una de las mejores orientaciones para la luminosidad en Buenos Aires, recibiendo mucho sol. "
         elif orientation in self.orientacion_question:
-            self._check_condition(None, "Orientación", f"Orientación {orientation}, luminosidad intermedia.")
+            condition = None
+            explanation = f"Orientación {orientation} 🌅. Recibe luz solo por una parte del día, lo que puede ser ideal para algunas personas."
         elif orientation in self.orientacion_cross:
-            self._check_condition(False, "Orientación", f"Orientación {orientation}, poca luminosidad.")
-        else:
-            self._check_condition(None, "Orientación", "No se pudo determinar la orientación.")
+            condition = False
+            explanation = f"Orientación {orientation} 🌥️. Recibe poca o ninguna luz solar directa, lo que puede hacer que el departamento sea más oscuro y frío."
+        
+        self._check_condition(condition, "Orientación y luminosidad", explanation)
 
     def get_results(self) -> str:
         """Devuelve los resultados de los chequeos como una cadena de texto."""

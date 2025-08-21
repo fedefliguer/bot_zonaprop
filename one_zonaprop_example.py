@@ -8,7 +8,8 @@ def main():
     """
     Orquesta: abre URL, reduce HTML (avisoInfo) y extrae atributos.
     """
-    url = "https://www.zonaprop.com.ar/propiedades/clasificado/veclapin-hidalgo-200-departamento-de-3-ambientes-en-buen-55882024.html"
+    
+    url = "https://www.zonaprop.com.ar/propiedades/clasificado/veclapin-3-ambientes-107-m-sup2--a-estrenar-entrega-inmediata-56540649.html"
 
     browser = Browser()
     scraper = Scraper(browser)
@@ -37,8 +38,7 @@ def main():
         return
 
     # 3) Evaluar los atributos con la nueva clase Checker
-    print("\nEvaluando los requisitos del aviso:\n")
-    print(url)
+    print('Nuevo aviso detectado: ', url)
     checker = Checker(json_structured_info)
     checker.run_checks()
     print(checker.get_results())
@@ -46,6 +46,5 @@ def main():
     # Obtener y mostrar los contadores
     checks_ok, checks_unknown, checks_fail = checker.get_counts()
     print(f"\nResumen de checks: ✅ {checks_ok} | ❓ {checks_unknown} | ❌ {checks_fail}")
-    
 if __name__ == "__main__":
     main()
