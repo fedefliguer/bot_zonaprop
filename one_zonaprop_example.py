@@ -1,13 +1,14 @@
 # one_zonaprop_example.py
-from src.Scraper import Scraper
 from src.Browser import Browser
+from src.Scraper import Scraper
+from src.Checker import Checker
 import json
 
 def main():
     """
     Orquesta: abre URL, reduce HTML (avisoInfo) y extrae atributos.
     """
-    url = "https://www.zonaprop.com.ar/propiedades/clasificado/veclapin-venta-depto-4-amb-en-caballito-apto-credito-56961450.html"
+    url = "https://www.zonaprop.com.ar/propiedades/clasificado/veclapin-hidalgo-200-departamento-de-3-ambientes-en-buen-55882024.html"
 
     browser = Browser()
     scraper = Scraper(browser)
@@ -25,8 +26,29 @@ def main():
     if not aviso_info:
         print("❌ No se pudo encontrar/parsear 'avisoInfo' dentro del HTML.")
         return
-    json_structured_info = scraper.structured_attributes(aviso_info)
-    print(json_structured_info)
+    
+    '''
+    json_structured_info_str = scraper.structured_attributes(aviso_info)
+    
+    # Convertir el string JSON a un diccionario de Python
+    try:
+        json_structured_info = json.loads(json_structured_info_str)
+    except json.JSONDecodeError:
+        print("❌ Error al decodificar el JSON estructurado.")
+        return
 
+    # 3) Evaluar los atributos con la nueva clase Checker
+    print("\nEvaluando los requisitos del aviso:\n")
+    print(url)
+    checker = Checker(json_structured_info)
+    checker.run_checks()
+    print(checker.get_results())
+    
+    # Obtener y mostrar los contadores
+    checks_ok, checks_unknown, checks_fail = checker.get_counts()
+    print(f"\nResumen de checks: ✅ {checks_ok} | ❓ {checks_unknown} | ❌ {checks_fail}")
+    '''
+    print(aviso_info)
+    
 if __name__ == "__main__":
     main()
