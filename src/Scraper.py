@@ -39,7 +39,7 @@ class Scraper:
             cleaned = cleaned[:-1].rstrip()
 
         return cleaned
-
+    
 
     def parse_number_from_text(self, text):
         """
@@ -51,31 +51,29 @@ class Scraper:
         cleaned_text = re.sub(r'[$,.]', '', text.strip())
         number_match = re.search(r'(\d+)', cleaned_text)
         return int(number_match.group(1)) if number_match else 0
-
+    
     def structured_attributes(self, aviso_info_str: str):
         structured = {}
         
         # Patrones para cada atributo.
         patrones = {
-            "id": r"'idAviso':\s*['"](.*?)['"]",
-            "title": r"'postingTitle'\s*:\s*['"](.*?)['"]",
-            "price": r"'price'\s*:\s*['"](.*?)['"]",
-            "currency": r"'pricesData':\s*\[.*?\'currency\':\'?(.*?)\'?].*?",
-            "expenses": r"'expenses':\s*['"]?(null|\d*)['"]?",
-            "location": r"'location':\s*\{.*?['"]name['"]\s*:\s*['"](.*?)['"].*?}",
-            "property_type": r"'realEstateType':\s*\{.*?['"]name['"]\s*:\s*['"](.*?)['"].*?}",
-            "bedrooms": r"'label'\s*:\s*'Dormitorios'\s*.*?['"]value['"]\s*:\s*['"](.*?)['"]",
-            "bathrooms": r"'label'\s*:\s*'Baños'\s*.*?['"]value['"]\s*:\s*['"](.*?)['"]",
-            "surface_total": r"'label'\s*:\s*'Superficie total'\s*.*?['"]value['"]\s*:\s*['"](.*?)['"]",
-            "surface_covered": r"'label'\s*:\s*'Superficie cubierta'\s*.*?['"]value['"]\s*:\s*['"](.*?)['"]",
-            "floor": r"'floorNumber':\s*['"]?(\d+)['"]?",
-            "description": r"'description'\s*:\s*(.*?)(?=\s*['"]address['"]\s*:\s*:)",
-            "address": r"'address':\s*\{.*?['"]name['"]\s*:\s*['"](.*?)['"].*?}",
-            "publisher_id": r"'publisherId':\s*['"](.*?)['"]",
-            "publisher_name": r"'publisher':\s*\{.*?['"]name['"]\s*:\s*['"](.*?)['"].*?}",
-            "whatsapp": r"'whatsApp':\s*['"](.*?)['"]",
-            "general_features": r"'generalFeatures':\s*(\[.*?\]),\s*'location'",
-            "main_features": r"'mainFeatures':\s*(\[.*?\]),\s*'realEstateType'",
+            "id": r"'idAviso':\s*['\"](.*?)['\"]",
+            "title": r"'postingTitle'\s*:\s*['\"](.*?)['\"]",
+            "price": r"'price'\s*:\s*['\"](.*?)['\"]",
+            "currency": r"'pricesData':\s*\[.*?\"currency\":\"(.*?)\"",
+            "location": r"'location':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
+            "property_type": r"'realEstateType':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
+            "bedrooms": r"['\"]label['\"]\s*:\s*['\"]dorm\.['\"].*?['\"]value['\"]\s*:\s*['\"](.*?)['\"]",
+            "bathrooms": r"['\"]label['\"]\s*:\s*['\"]baño['\"].*?['\"]value['\"]\s*:\s*['\"](.*?)['\"]",
+            "surface_total": r"['\"]label['\"]\s*:\s*['\"]tot\.['\"].*?['\"]value['\"]\s*:\s*['\"](.*?)['\"]",
+            "surface_covered": r"['\"]label['\"]\s*:\s*['\"]cub\.['\"].*?['\"]value['\"]\s*:\s*['\"](.*?)['\"]",
+            "description": r"'description'\s*:\s*(.*?)(?=\s*['\"]address['\"]\s*:)",
+            "address": r"'address':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
+            "publisher_id": r"'publisherId':\s*['\"](.*?)['\"]",
+            "publisher_name": r"'publisher':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
+            "whatsapp": r"'whatsApp':\s*['\"](.*?)['\"]",
+            "general_features": r"'generalFeatures':\s*({.*?}),\s*'location'",
+            "main_features": r"'mainFeatures':\s*({.*?}),\s*'realEstateType'",
         }
 
         for key, pattern in patrones.items():
@@ -87,7 +85,7 @@ class Scraper:
                     try:
                         # Reemplazar comillas simples por dobles y corregir sintaxis
                         temp_json_str = value.replace("'", '"')
-                        temp_json_str = re.sub(r'"(null|false|true)"', r'\1', temp_json_str)
+                        temp_json_str = re.sub(r'\"(null|false|true)\"', r'\1', temp_json_str)
                         
                         parsed_json = json.loads(temp_json_str)
                         structured[key] = parsed_json

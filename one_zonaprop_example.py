@@ -27,7 +27,6 @@ def main():
         print("❌ No se pudo encontrar/parsear 'avisoInfo' dentro del HTML.")
         return
     
-    '''
     json_structured_info_str = scraper.structured_attributes(aviso_info)
     
     # Convertir el string JSON a un diccionario de Python
@@ -47,8 +46,6 @@ def main():
     # Obtener y mostrar los contadores
     checks_ok, checks_unknown, checks_fail = checker.get_counts()
     print(f"\nResumen de checks: ✅ {checks_ok} | ❓ {checks_unknown} | ❌ {checks_fail}")
-    '''
-    print(aviso_info)
     
 if __name__ == "__main__":
     main()
