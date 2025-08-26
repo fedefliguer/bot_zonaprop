@@ -17,7 +17,7 @@ class Scraper:
         """Initializes the scraper with a Browser instance."""
         self.browser = browser_instance
         self.scrape_url = scrape_url
-        self.avenidas_caba = ["corrientes", "libertador", "santa fe", "cordoba", "rivadavia", "cabildo", "lacroze", "juan b justo", "constitucion", "callao", "entre rios", "general paz"]
+        self.avenidas_caba = ["pueyrredon", "corrientes", "libertador", "santa fe", "cordoba", "rivadavia", "cabildo", "lacroze", "juan b justo", "constitucion", "callao", "entre rios", "general paz"]
 
     # Methods for a single listing
     def reduce_html_to_aviso_info(self, html_text: str) -> Optional[Dict[str, Any]]:

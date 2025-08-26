@@ -4,14 +4,14 @@ from dotenv import load_dotenv
 from src.Browser import Browser
 from src.Scraper import Scraper
 from src.Checker import Checker
-from src.Telegram import Telegram
 import json
+import requests
 
 load_dotenv()
 
 def main():
 
-    scrape_url = "https://www.zonaprop.com.ar/departamentos-venta-villa-crespo-villa-del-parque-caballito-la-paternal-villa-general-mitre-villa-urquiza-colegiales-agronomia-3-ambientes-mas-60-m2-cubiertos-publicado-hace-menos-de-1-dia-menos-160000-dolar.html"
+    scrape_url = "https://www.zonaprop.com.ar/casas-departamentos-ph-venta-villa-crespo-villa-del-parque-caballito-la-paternal-villa-general-mitre-villa-urquiza-colegiales-agronomia-3-ambientes-mas-50-m2-cubiertos-publicado-hace-menos-de-1-dia-menos-160000-dolar.html"
     browser = Browser()
     scraper_list = Scraper(browser_instance=browser, scrape_url=scrape_url)
     new_posts = scraper_list.scrape_web()
@@ -20,50 +20,40 @@ def main():
 
         scraper = Scraper(browser)
 
-        print(f"Iniciando la extracción en: {url}\n")
+        print(f"\n{'='*50}\nIniciando la extracción en: {url}\n")
 
-        # 1) Obtener HTML crudo
+        # 1) Obtener HTML y datos estructurados
         html = browser.get_text(url)
         if not html:
             print("❌ No se pudo obtener el HTML de la URL.")
-            return
+            continue
 
-        # 2) Extraer atributos
         aviso_info = scraper.reduce_html_to_aviso_info(html)
         if not aviso_info:
             print("❌ No se pudo encontrar/parsear 'avisoInfo' dentro del HTML.")
-            return
+            continue
         
-        json_structured_info_str = scraper.structured_attributes(aviso_info)
-        
-        # Convertir el string JSON a un diccionario de Python
         try:
-            json_structured_info = json.loads(json_structured_info_str)
+            json_structured_info = json.loads(scraper.structured_attributes(aviso_info))
         except json.JSONDecodeError:
             print("❌ Error al decodificar el JSON estructurado.")
-            return
-
-        # 3) Evaluar los atributos con la nueva clase Checker
-        print('Nuevo aviso detectado: ', url)
-        checker = Checker(json_structured_info)
-        checker.run_checks()
-        print(checker.get_results())
+            continue
         
-        # Obtener y mostrar los contadores
-        checks_ok, checks_unknown, checks_fail = checker.get_counts()
-        print(f"\nResumen de checks: ✅ {checks_ok} | ❓ {checks_unknown} | ❌ {checks_fail}")
+        # 2) Evaluar los atributos con el nuevo Checker
+        summary = f'Nuevo aviso detectado: {url}'
+        checker = Checker(json_structured_info)
+        checker.run_all_checks() # Se corre la nueva función principal de chequeos
+        summary = summary + '\n' + checker.get_summary()
 
-        '''
-        telegram = Telegram(os.environ["botId"])
-        notificados = set()
-        for depto in deptos:
-            if depto["id"] not in notificados:
-                message = telegram.make_message(depto)
-                print("Mensaje preparado:\n", message) # Print the message
-                # telegram.send_message(os.environ["chatId"], message) # Commented out
-                notificados.add(depto["id"])
-                print("Notif enviada:", depto["id"])
-                break # Exit after processing one depto
-        '''
+        # 4) (Opcional) Lógica de notificación si pasa todos los filtros
+        if checker.passed_avenue_check() and checker.passed_price_check():
+            TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+            CHAT_ID = os.environ["CHAT_ID"]
+            url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={CHAT_ID}&text={summary}"
+            response = requests.get(url).json()
+            print('Enviado')
+        else:
+            pass
+
 if __name__ == "__main__":
     main()

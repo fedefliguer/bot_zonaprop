@@ -1,240 +1,269 @@
 # Checker.py
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, List, Tuple
 import re
 
 class Checker:
     """
-    Una clase para evaluar si un aviso de propiedad cumple con ciertos criterios deseables.
+    Evalúa si una propiedad cumple con criterios específicos, agrupados por antigüedad.
     """
     def __init__(self, structured_data: Dict[str, Any]):
-        """Inicializa el checker con los datos estructurados del aviso."""
         self.data = structured_data
         self.results = []
-        self.counts = {"✅": 0, "❌": 0, "❓": 0}
-        self.avenidas_caba = ["av. ", "av ", "avenida "]
-        self.orientacion_check = ["Norte", "Noreste", "Noroeste", "N", "NE", "NO"]
-        self.orientacion_question = ["Este", "Oeste", "E", "O"]
-        self.orientacion_cross = ["Sur", "Sudeste", "Sudoeste", "S", "SO", "SE"]
+        self.property_type = "Desconocido"
+        self.passed_checks_list = []
+        self.failed_checks_list = []
+        self.unknown_checks_list = []
+        self.avenidas_principales = [
+            "av.", "avenida", "av:",
+            "del libertador", "corrientes", "córdoba", "santa fe", "rivadavia", 
+            "callao", "pueyrredón", "las heras", "coronel díaz", "cabildo", "pueyrredon",
+            "juramento", "congreso", "triunvirato", "de los incas", "álvarez thomas",
+            "forest", "federico lacroze", "gaona", "nazca", "san martín", "san martin",
+            "beiró", "lope de vega", "juan b. justo", "acoyte", "la plata", "directorio",
+            "eva perón", "san juan", "independencia", "belgrano", "entre ríos", "jujuy"
+        ]
 
-    def _check_condition(self, condition: Any, requirement_name: str, explanation: str):
-        """Añade un resultado de chequeo a la lista de resultados y actualiza los contadores."""
-        emoji = "❓"
-        if condition is True:
-            emoji = "✅"
-        elif condition is False:
-            emoji = "❌"
-        
-        self.results.append(f"{emoji} {requirement_name}: {explanation}")
-        self.counts[emoji] += 1
+    def _add_result(self, status: str, check_name: str, details: str):
+        """Añade un resultado a las listas de checks pasados, fallidos o desconocidos."""
+        if status == "passed":
+            self.passed_checks_list.append(f"✅ {check_name}: {details}")
+        elif status == "failed":
+            self.failed_checks_list.append(f"❌ {check_name}: {details}")
+        else: # unknown
+            self.unknown_checks_list.append(f"🟡 {check_name}: {details}")
 
-    def run_checks(self):
+    def run_all_checks(self):
         """
-        Ejecuta todos los chequeos definidos y almacena los resultados.
+        Ejecuta todos los chequeos basados en la antigüedad y los requisitos generales.
         """
-        self.check_bathrooms()
-        self.check_age()
-        self.check_covered_area()
-        self.check_balcony_or_patio()
-        self.check_laundry()
-        self.check_gas()
-        self.check_expensas()
-        self.check_address()
-        self.check_orientation()
-        self.check_elevator_and_floor()
+        # 1. Determinar el grupo de antigüedad
+        age = self._get_age()
+        price = self._get_price()
 
-    def check_elevator_and_floor(self):
-        """Chequea si el departamento tiene ascensor y está en un piso superior al 4to."""
-        description_text = self.data.get("description", "").lower()
-        
-        if "por escalera" in description_text:
-            self._check_condition(False, "Ascensor y piso", "Es por escalera.")
-            return
-
-        general_features = self.data.get("general_features", {})
-        has_elevator = False
-        if "Servicios" in general_features:
-            for feature in general_features["Servicios"].values():
-                if feature.get("label") == "Ascensor":
-                    has_elevator = True
-                    break
-        
-        if "ascensor" in description_text:
-            has_elevator = True
-
-        floor_number = None
-        if "floor" in self.data and self.data["floor"] is not None:
-            floor_str = str(self.data["floor"])
-            floor_numbers = re.findall(r'\d+', floor_str)
-            if floor_numbers:
-                floor_number = int(floor_numbers[0])
-
-        if has_elevator and floor_number is not None and floor_number > 4:
-            self._check_condition(True, "Ascensor y piso", f"Tiene ascensor y está en el piso {floor_number}.")
-        elif not has_elevator and floor_number is not None and floor_number in [2, 3]:
-            self._check_condition(False, "Ascensor y piso", f"Piso {floor_number} por escalera.")
+        if age is not None:
+            if 0 <= age <= 20:
+                self.property_type = "Nuevo (0-20 años)"
+                self._run_nuevos_checks(price)
+            elif 21 <= age <= 50:
+                self.property_type = "Intermedio (21-50 años)"
+                self._run_intermedios_checks(price)
+            else: # > 50
+                self.property_type = "Viejo (+50 años)"
+                self._run_viejos_checks(price)
         else:
-            explanation = "No se pudo determinar la información del ascensor y el piso."
-            if has_elevator:
-                explanation = "Tiene ascensor pero no se pudo determinar el piso."
-            if floor_number is not None:
-                explanation = f"Piso {floor_number} pero no se pudo determinar si tiene ascensor."
-            self._check_condition(None, "Ascensor y piso", explanation)
+            self.property_type = "Antigüedad desconocida"
+            # No se pueden correr checks específicos de grupo, pero sí los generales.
 
-    def check_bathrooms(self):
-        """Chequea si el aviso tiene 2 baños o más."""
-        try:
-            bathrooms = int(self.data.get("bathrooms", 0))
-            condition = bathrooms >= 2
-            explanation = f"Tiene {bathrooms} baño{'s' if bathrooms != 1 else ''}. "
-            self._check_condition(condition, "Tiene dos baños o más", explanation)
-        except (ValueError, TypeError):
-            self._check_condition(False, "Tiene dos baños o más", "No se pudo determinar la cantidad de baños.")
+        # 2. Ejecutar chequeos comunes a todos los grupos
+        self._check_common_requirements()
 
-    def check_age(self):
-        """Chequea si la antigüedad es menor a 50 años."""
+    def _get_age(self) -> int | None:
+        """Extrae la antigüedad del inmueble."""
         try:
+            # Intenta obtener la antigüedad desde 'main_features'
             antiquity_data = self.data.get("main_features", {}).get("CFT5")
             if antiquity_data and antiquity_data.get("label") == "antigüedad":
-                age = int(antiquity_data.get("value"))
-                condition = age < 50
-                explanation = f"Antigüedad de {age} años."
-                self._check_condition(condition, "Antigüedad menor a 50 años", explanation)
-            else:
-                self._check_condition(None, "Antigüedad menor a 50 años", "No se encontró la antigüedad del inmueble.")
+                return int(antiquity_data.get("value"))
+            
+            # Si no, busca en la descripción
+            description = self.data.get("description", "").lower()
+            match = re.search(r'(\d+)\s+años\s+de\s+antigüedad', description)
+            if match:
+                return int(match.group(1))
+
         except (KeyError, ValueError, TypeError):
-            self._check_condition(None, "Antigüedad menor a 50 años", "No se pudo determinar la antigüedad.")
+            pass
+        return None
 
-    def check_covered_area(self):
-        """Chequea si tiene más de 60m2 cubiertos."""
+    def _get_price(self) -> float | None:
+        """Extrae el precio del inmueble."""
         try:
-            covered_area = int(self.data.get("surface_covered", 0))
-            condition = covered_area > 60
-            explanation = f"Tiene {covered_area}m² cubiertos."
-            self._check_condition(condition, "Más de 60m² cubiertos", explanation)
+            price_str = self.data.get("price")
+            currency = self.data.get("currency")
+            if price_str and currency == "USD":
+                # Eliminar "USD" y puntos de miles, luego convertir a float
+                price_cleaned = re.sub(r'[USD\s,.]', '', price_str)
+                return float(price_cleaned)
         except (ValueError, TypeError):
-            self._check_condition(False, "Más de 60m² cubiertos", "No se pudo determinar la superficie cubierta.")
+            pass
+        return None
+    
+    def _get_floor(self) -> int | None:
+        """Extrae el número de piso del inmueble."""
+        try:
+            floor_str = str(self.data.get("floor", ""))
+            floor_numbers = re.findall(r'\\d+', floor_str)
+            if floor_numbers:
+                return int(floor_numbers[0])
+        except (ValueError, TypeError):
+            pass
+        return None
 
-    def check_balcony_or_patio(self):
-        """Chequea si tiene balcón, patio o más m2 totales que cubiertos."""
-        has_balcony_general = any(item.get("label") == "Balcón" for item in self.data.get("general_features", {}).get("Ambientes", {}).values())
-        description_text = self.data.get("description", "").lower()
-        has_balcony_description = "balcón" in description_text
-        has_patio_description = "patio" in description_text
+    # --- CHEQUEOS COMUNES ---
+    def _check_common_requirements(self):
+        """Chequeos que aplican a todos los inmuebles."""
+        self._check_bathrooms()
+        self._check_balcony_or_patio()
+        self._check_expensas()
+        self._check_avenue()
 
-        has_balcony_or_patio = has_balcony_general or has_balcony_description or has_patio_description
-        total_area = int(self.data.get("surface_total", 0))
-        covered_area = int(self.data.get("surface_covered", 0))
-        has_extra_space = total_area > covered_area
+    def _check_bathrooms(self):
+        """Chequea si tiene 2 o más baños."""
+        try:
+            bathrooms = int(self.data.get("bathrooms", 0))
+            if bathrooms > 0:
+                passed = bathrooms >= 2
+                self._add_result("passed" if passed else "failed", "Baños", f"Tiene {bathrooms} baño(s).")
+            else:
+                self._add_result("unknown", "Baños", "No se pudo determinar la cantidad.")
+        except (ValueError, TypeError):
+            self._add_result("unknown", "Baños", "No se pudo determinar la cantidad.")
 
-        condition = has_balcony_or_patio or has_extra_space
-        explanation = ""
-        if condition:
-            if has_balcony_or_patio:
-                explanation += "Se menciona balcón o patio."
-            if has_extra_space:
-                explanation += f" Los m² totales ({total_area}) son mayores que los cubiertos ({covered_area})."
-        else:
-            explanation = f"No tiene balcón/patio y los m² totales ({total_area}) son iguales o menores que los cubiertos ({covered_area})."
+    def _check_balcony_or_patio(self):
+        """Chequea si tiene balcón o patio."""
+        has_balcony = any(item.get("label") == "Balcón" for item in self.data.get("general_features", {}).get("Ambientes", {}).values())
+        description = self.data.get("description", "").lower()
+        has_balcony_desc = "balcón" in description
+        has_patio_desc = "patio" in description
         
-        self._check_condition(condition, "Balcón, patio, o más m² totales que cubiertos", explanation.strip())
-
-    def check_laundry(self):
-        """Chequea si tiene lavadero."""
-        has_laundry_general = any(item.get("label") == "Lavadero" for item in self.data.get("general_features", {}).get("Ambientes", {}).values())
-        description_text = self.data.get("description", "").lower()
-        has_laundry_description = "lavadero" in description_text
-
-        condition = has_laundry_general or has_laundry_description
-        explanation = "Se encontró la palabra 'lavadero'." if condition else "No se encontró la palabra 'lavadero'."
-        self._check_condition(condition, "Tiene lavadero", explanation)
-
-    def check_gas(self):
-        """Chequea si tiene gas o cocina a gas."""
-        description_text = self.data.get("description", "").lower()
-        if "cocina a gas" in description_text or "gas" in description_text:
-            self._check_condition(True, "Tiene gas", "Se menciona gas o cocina a gas en la descripción.")
+        if has_balcony or has_balcony_desc or has_patio_desc:
+            self._add_result("passed", "Balcón o Patio", "Sí")
         else:
-            self._check_condition(None, "Tiene gas", "No se pudo confirmar si tiene gas.")
+            self._add_result("unknown", "Balcón o Patio", "No especificado.")
 
-    def check_expensas(self):
-        """Chequea si las expensas son menores a $150.000."""
-        # Prioridad 1: Campo 'expenses' del avisoInfo
-        expensas_value = self.data.get("expenses")
-        
-        if expensas_value:
+    def _check_expensas(self):
+        """Chequea si las expensas son menores a $150,000."""
+        expensas_val = self.data.get("expenses")
+        if expensas_val:
             try:
-                expensas = int(expensas_value)
-                condition = expensas < 150000
-                explanation = f"Expensas de ${expensas:,}. "
-                self._check_condition(condition, "Expensas menores a $150.000", explanation)
+                expensas = int(expensas_val)
+                passed = expensas < 150000
+                self._add_result("passed" if passed else "failed", "Expensas", f"Son de ${expensas:,}.")
                 return
             except (ValueError, TypeError):
-                # Si el campo existe pero no es un número válido, se sigue a la siguiente lógica
                 pass
+        self._add_result("unknown", "Expensas", "No especificadas.")
 
-        # Prioridad 2: Buscar en la descripción
-        description_text = self.data.get("description", "").lower()
-        match = re.search(r'expensas.*?(\$?\s*\d[\d\.,]*)', description_text, re.IGNORECASE)
-        
-        if match:
-            expensas_str = match.group(1).replace(' ', '').replace('.', '').replace(',', '').strip()
-            try:
-                expensas = int(expensas_str)
-                condition = expensas < 150000
-                explanation = f"Expensas de ${expensas:,}. "
-                self._check_condition(condition, "Expensas menores a $150.000", explanation)
-            except ValueError:
-                self._check_condition(None, "Expensas menores a $150.000", "No se pudo extraer un valor numérico de las expensas.")
-        else:
-            self._check_condition(None, "Expensas menores a $150.000", "No se encontró la palabra 'expensas' en la descripción.")
-
-    def check_address(self):
-        """Chequea si el inmueble está en una avenida y su disposición."""
+    def _check_avenue(self):
+        """Chequea si la dirección está en una avenida principal."""
         address = self.data.get("address", "").lower()
-        disposicion = self.data.get("main_features", {}).get("1000019", {}).get("value", "").lower()
+        if not address or address == 'n/a':
+            self._add_result("unknown", "No en Avenida", "Dirección no especificada.")
+            return
 
-        is_on_avenue = any(avenida in address for avenida in self.avenidas_caba)
+        is_on_avenue = any(av in address for av in self.avenidas_principales)
+        passed = not is_on_avenue
+        details = f"Dirección: {self.data.get('address', 'N/A')}."
+        self._add_result("passed" if passed else "failed", "No en Avenida", details)
 
-        if is_on_avenue:
-            if disposicion == "contrafrente":
-                self._check_condition(None, "No está en una avenida", f"Es contrafrente, aunque la dirección {address} esté en una avenida.")
-            else:
-                self._check_condition(False, "No está en una avenida", f"La dirección {address} está en una avenida y no es contrafrente.")
+    # --- CHEQUEOS POR GRUPO ---
+    def _run_nuevos_checks(self, price: float | None):
+        """Chequeos para inmuebles 'Nuevos' (0-20 años)."""
+        # Precio
+        if price is not None:
+            passed = price <= 160000
+            self._add_result("passed" if passed else "failed", "Precio (Max $160k)", f"USD ${price:,.0f}.")
         else:
-            self._check_condition(True, "No está en una avenida", f"La dirección {address} no está en una avenida.")
-
-    def check_orientation(self):
-        """Chequea la orientación del inmueble y añade información sobre la luminosidad."""
-        orientation = self.data.get("main_features", {}).get("1000029", {}).get("value")
+            self._add_result("unknown", "Precio (Max $160k)", "No especificado.")
         
-        explanation = "No se pudo determinar la orientación."
-        condition = None
+        # Gas
+        description = self.data.get("description", "").lower()
+        has_gas = "cocina a gas" in description or "gas natural" in description
+        if has_gas:
+            self._add_result("passed", "Tiene Gas", "Sí")
+        else:
+            self._add_result("unknown", "Tiene Gas", "No especificado.")
 
-        if orientation in self.orientacion_check:
-            condition = True
-            explanation = f"Orientación {orientation} ☀️. Es una de las mejores orientaciones para la luminosidad en Buenos Aires, recibiendo mucho sol. "
-        elif orientation in self.orientacion_question:
-            condition = None
-            explanation = f"Orientación {orientation} 🌅. Recibe luz solo por una parte del día, lo que puede ser ideal para algunas personas."
-        elif orientation in self.orientacion_cross:
-            condition = False
-            explanation = f"Orientación {orientation} 🌥️. Recibe poca o ninguna luz solar directa, lo que puede hacer que el departamento sea más oscuro y frío."
+        # Ascensor o 1er piso
+        has_elevator = "ascensor" in description or any(f.get("label") == "Ascensor" for f in self.data.get("general_features", {}).get("Servicios", {}).values())
+        floor = self._get_floor()
         
-        self._check_condition(condition, "Orientación y luminosidad", explanation)
+        if floor is not None:
+            is_first_floor = floor == 1
+            passed_elevator = has_elevator or is_first_floor
+            details = f"Piso: {floor}. Ascensor: {'Sí' if has_elevator else 'No'}."
+            self._add_result("passed" if passed_elevator else "failed", "Ascensor o 1er Piso", details)
+        else:
+            details = f"Piso: N/A. Ascensor: {'Sí' if has_elevator else 'No'}."
+            self._add_result("unknown", "Ascensor o 1er Piso", details)
 
-    def get_results(self) -> str:
-        """Devuelve los resultados de los chequeos como una cadena de texto."""
-        # Se agrega la información de precio y editor al final
-        publisher_name = self.data.get("publisher_name", "No disponible")
-        publisher_whatsapp = self.data.get("whatsapp", "No disponible")
+
+    def _run_intermedios_checks(self, price: float | None):
+        """Chequeos para inmuebles 'Intermedios' (20-50 años)."""
+        # Precio
+        if price is not None:
+            passed = price <= 145000
+            self._add_result("passed" if passed else "failed", "Precio (Max $145k)", f"USD ${price:,.0f}.")
+        else:
+            self._add_result("unknown", "Precio (Max $145k)", "No especificado.")
+
+        # No primer piso
+        floor = self._get_floor()
+        if floor is not None:
+            not_first_floor = floor != 1
+            self._add_result("passed" if not_first_floor else "failed", "No es 1er Piso", f"Piso: {floor}.")
+        else:
+            self._add_result("unknown", "No es 1er Piso", "Piso: N/A.")
+
+        # Luminoso
+        description = self.data.get("description", "").lower()
+        is_luminous = "luminoso" in description or "mucha luz" in description
+        if is_luminous:
+            self._add_result("passed", "Luminoso", "Sí")
+        else:
+            self._add_result("unknown", "Luminoso", "No especificado.")
+
+    def _run_viejos_checks(self, price: float | None):
+        """Chequeos para inmuebles 'Viejos' (+50 años)."""
+        # Precio
+        if price is not None:
+            passed = price <= 130000
+            self._add_result("passed" if passed else "failed", "Precio (Max $130k)", f"USD ${price:,.0f}.")
+        else:
+            self._add_result("unknown", "Precio (Max $130k)", "No especificado.")
+
+        # No primer piso
+        floor = self._get_floor()
+        if floor is not None:
+            not_first_floor = floor != 1
+            self._add_result("passed" if not_first_floor else "failed", "No es 1er Piso", f"Piso: {floor}.")
+        else:
+            self._add_result("unknown", "No es 1er Piso", "Piso: N/A.")
+
+        # Luminoso
+        description = self.data.get("description", "").lower()
+        is_luminous = "luminoso" in description or "mucha luz" in description
+        if is_luminous:
+            self._add_result("passed", "Luminoso", "Sí")
+        else:
+            self._add_result("unknown", "Luminoso", "No especificado.")
+
+    def get_summary(self) -> str:
+        """Devuelve un resumen formateado de los resultados."""
+        summary_lines = [
+            f"🏠 Tipo: {self.property_type}",
+            f"📍 Dirección: {self.data.get('address', 'No disponible')}",
+        ]
+        summary_lines.extend(self.passed_checks_list)
         
-        end_info = f"\nPrecio: {self.data.get('price', 'No disponible')} ({self.data.get('currency', 'N/A')})"
-        end_info += f"\nPublicado por: {publisher_name}"
-        if publisher_whatsapp:
-            end_info += f"\nWhatsApp: {publisher_whatsapp}"
+        if self.failed_checks_list:
+            summary_lines.extend(self.failed_checks_list)
+        
+        if self.unknown_checks_list:
+            summary_lines.extend(self.unknown_checks_list)
+            
+        return "\n".join(summary_lines)
 
-        return "\n".join(self.results) + end_info
-    
-    def get_counts(self) -> Tuple[int, int, int]:
-        """Devuelve la cantidad de checks positivos, dudosos y negativos."""
-        return self.counts["✅"], self.counts["❓"], self.counts["❌"]
+    def passed_avenue_check(self) -> bool:
+        """Verifica si el chequeo de la avenida fue exitoso."""
+        for result in self.passed_checks_list:
+            if "No en Avenida" in result:
+                return True
+        return False
+
+    def passed_price_check(self) -> bool:
+        """Verifica si el chequeo de precio fue exitoso."""
+        for result in self.passed_checks_list:
+            if "Precio" in result:
+                return True
+        return False
