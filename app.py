@@ -13,8 +13,12 @@ def main():
     browser = Browser()
     scraper_list = Scraper(browser_instance=browser, scrape_url=scrape_url)
     new_posts = scraper_list.scrape_web()
-    db = Database() # Instanciamos la base de datos
-    notifier = TelegramNotifier() # Instanciamos el notificador
+    db_url = os.environ.get("DATABASE_URL")
+    db = Database(db_url) # Instanciamos la base de datos
+    
+    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    notifier = TelegramNotifier(token=telegram_token, chat_id=telegram_chat_id) # Instanciamos el notificador
 
     for url in new_posts:
         if not db.property_exists(url):

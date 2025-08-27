@@ -5,10 +5,9 @@ import json
 import os
 
 class Database:
-    def __init__(self):
-        db_url = os.environ.get("DATABASE_URL")
+    def __init__(self, db_url):
         if not db_url:
-            raise ValueError("No se encontró la variable de entorno DATABASE_URL")
+            raise ValueError("La URL de la base de datos no puede estar vacía")
         
         self.conn = psycopg2.connect(db_url)
         self.cursor = self.conn.cursor()

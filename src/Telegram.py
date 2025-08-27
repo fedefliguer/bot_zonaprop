@@ -3,13 +3,19 @@ import os
 import requests
 
 class TelegramNotifier:
-    def __init__(self):
+    def __init__(self, token=None, chat_id=None):
         """
         Inicializa el notificador con el token del bot y el ID del chat 
         desde las variables de entorno.
         """
-        self.token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+        if not token:
+            token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        if not chat_id:
+            chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+        self.token = token
+        self.chat_id = chat_id
+
         if not self.token or not self.chat_id:
             raise ValueError("Las variables de entorno TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID deben estar definidas.")
 
