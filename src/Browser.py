@@ -5,6 +5,8 @@ import requests
 class Browser():
     def __init__(self) -> None:
         self.browser = cloudscraper.create_scraper()
+        self.browser.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'})
+
 
     def get(self, url, retries=5, delay=2):
         for i in range(retries):
