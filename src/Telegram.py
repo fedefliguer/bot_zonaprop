@@ -1,9 +1,6 @@
 # src/Telegram.py
 import os
 import requests
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class TelegramNotifier:
     def __init__(self):
@@ -12,9 +9,9 @@ class TelegramNotifier:
         desde las variables de entorno.
         """
         self.token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        self.chat_id = os.environ.get("CHAT_ID")
+        self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         if not self.token or not self.chat_id:
-            raise ValueError("Las variables de entorno TELEGRAM_BOT_TOKEN y CHAT_ID deben estar definidas.")
+            raise ValueError("Las variables de entorno TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID deben estar definidas.")
 
     def send_message(self, message):
         """

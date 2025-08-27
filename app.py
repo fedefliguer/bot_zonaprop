@@ -1,6 +1,5 @@
 import time
 import os
-from dotenv import load_dotenv
 from src.Browser import Browser
 from src.Scraper import Scraper
 from src.Checker import Checker
