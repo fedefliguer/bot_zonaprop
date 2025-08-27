@@ -7,8 +7,6 @@ from src.Database import Database
 from src.Telegram import TelegramNotifier
 import json
 
-load_dotenv()
-
 def main():
 
     scrape_url = "https://www.zonaprop.com.ar/casas-departamentos-ph-venta-villa-crespo-villa-del-parque-caballito-la-paternal-villa-general-mitre-villa-urquiza-colegiales-agronomia-3-ambientes-mas-50-m2-cubiertos-publicado-hace-menos-de-1-dia-menos-160000-dolar.html"
