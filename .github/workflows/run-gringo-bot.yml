@@ -2,6 +2,7 @@ name: Run Gringo Bot
 
 on:
   schedule:
+    # 10:00 UTC es 07:00 ART. Cubre de 10:00 a 03:00 UTC.
     - cron: '5 10-23,0-3 * * *'
   workflow_dispatch:
 
@@ -26,6 +27,7 @@ jobs:
       - name: Run Gringo Bot
         run: python app_gringo.py
         env:
+          PYTHONUNBUFFERED: 1
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
