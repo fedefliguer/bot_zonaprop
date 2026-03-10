@@ -2,64 +2,64 @@ import cloudscraper
 import time
 import requests
 import random
+import os
+from urllib.parse import urlencode
 
 class Browser():
     def __init__(self) -> None:
-        # Inicializamos cloudscraper con una configuración de navegador real
-        self.browser = cloudscraper.create_scraper(
-            browser={
-                'browser': 'chrome',
-                'platform': 'windows',
-                'desktop': True
-            }
-        )
-        # Lista de User-Agents modernos para rotar
+        self.scraper_api_key = os.environ.get("SCRAPER_API_KEY")
+        
+        if self.scraper_api_key:
+            # Si hay API Key, usamos requests simple ya que ScraperAPI maneja el JS/Cookies
+            self.session = requests.Session()
+            print("🛡️ ScraperAPI detectada. Usando modo proxy residencial.")
+        else:
+            # Modo normal (local o sin API key)
+            self.session = cloudscraper.create_scraper(
+                browser={
+                    'browser': 'chrome',
+                    'platform': 'windows',
+                    'desktop': True
+                }
+            )
+            print("ℹ️ Iniciando navegador en modo estándar (Cloudscraper).")
+
         self.user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         ]
 
-    def get(self, url, retries=5, delay=5):
-        # Limpieza básica de la URL por si acaso
+    def get(self, url, retries=3, delay=5):
+        # Limpieza de URL
         if url.endswith('.html.html'):
             url = url.replace('.html.html', '.html')
 
         for i in range(retries):
-            # Rotar User-Agent y headers en cada intento para evitar patrones fijos
-            current_ua = random.choice(self.user_agents)
-            self.browser.headers.update({
-                'User-Agent': current_ua,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Cache-Control': 'max-age=0',
-            })
-            
             try:
-                # Agregar un pequeño delay aleatorio extra
-                if i > 0:
-                    wait_time = random.uniform(delay, delay + 7)
-                    print(f"Waiting {wait_time:.2f}s before retry...")
-                    time.sleep(wait_time)
+                if self.scraper_api_key:
+                    # Construir la URL de ScraperAPI
+                    payload = {
+                        'api_key': self.scraper_api_key,
+                        'url': url,
+                        'render': 'false', # Zonaprop no necesita renderizado JS para el HTML base
+                        'premium': 'true'   # Usar IPs residenciales para evitar el 403
+                    }
+                    proxy_url = 'http://api.scraperapi.com/?' + urlencode(payload)
+                    req = self.session.get(proxy_url, timeout=60)
+                else:
+                    # Modo normal con headers rotativos
+                    current_ua = random.choice(self.user_agents)
+                    self.session.headers.update({'User-Agent': current_ua})
+                    req = self.session.get(url, timeout=30)
                 
-                # Realizar la petición con un timeout razonable
-                req = self.browser.get(url, timeout=30)
-                req.raise_for_status() 
+                req.raise_for_status()
                 return req
             except requests.exceptions.RequestException as e:
-                print(f"Error fetching {url}: {e}")
+                print(f"⚠️ Error fetching {url} (Intento {i+1}/{retries}): {e}")
                 if i < retries - 1:
-                    print(f"Retrying ({i+1}/{retries})...")
+                    time.sleep(delay)
                 else:
-                    print(f"Failed to fetch {url} after {retries} retries.")
+                    print(f"❌ Fallo crítico al obtener {url} tras {retries} reintentos.")
                     return None
         return None
 
