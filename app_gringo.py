@@ -9,7 +9,7 @@ import json
 
 def main():
 
-    scrape_url = "https://www.zonaprop.com.ar/ph-alquiler-saavedra-villa-urquiza-coghlan-villa-ortuzar-chacarita-colegiales-agronomia-parque-chas-villa-crespo-caballito-almagro-boedo-san-cristobal-la-paternal-villa-general-mitre-belgrano-r-belgrano-desde-1-hasta-2-habitaciones-desde-2-hasta-3-ambientes-menos-1200000-pesos"
+    scrape_url = "https://www.zonaprop.com.ar/ph-alquiler-saavedra-villa-urquiza-coghlan-villa-ortuzar-chacarita-colegiales-agronomia-parque-chas-villa-crespo-caballito-almagro-boedo-san-cristobal-la-paternal-villa-general-mitre-belgrano-r-belgrano-desde-1-hasta-2-habitaciones-desde-2-hasta-3-ambientes-publicado-hace-menos-de-2-dias-menos-1200000-pesos.html"
     browser = Browser()
     scraper_list = Scraper(browser_instance=browser, scrape_url=scrape_url)
     new_posts = scraper_list.scrape_web()
