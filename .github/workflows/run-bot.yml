@@ -1,7 +1,10 @@
 name: Run Zonaprop Bot
 
 on:
-  # Permite la ejecución manual desde la pestaña Actions en GitHub
+  schedule:
+    # Corre cada hora en el minuto 35
+    # De 10:00 UTC a 03:00 UTC (+/- 07:00 a 00:00 ART)
+    - cron: '35 10-23,0-3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,9 +23,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r bot_zonaprop/requirements.txt
 
       - name: Run bot (Tero Pec)
+        working-directory: ./bot_zonaprop
         run: python app_tero_pec.py
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
