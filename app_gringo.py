@@ -21,6 +21,14 @@ def main():
     notifier = TelegramNotifier(token=telegram_token, chat_id=telegram_chat_id) # Instanciamos el notificador
 
     for url in new_posts:
+        # Filtrar URLs que no son de avisos reales
+        if "/propiedades/clasificado/" not in url:
+            continue
+        
+        # Evitar páginas institucionales o de ayuda
+        if any(exclude in url for exclude in ["help.zonaprop", "terminos-y-condiciones", "politica-de-privacidad"]):
+            continue
+
         if not db.property_exists(url):
             print(f"\n{'='*50}\nInmueble nuevo detectado (Gringo). Iniciando la extracción en: {url}\n")
             
