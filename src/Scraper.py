@@ -79,6 +79,7 @@ class Scraper:
             "surface_covered": r"['\"]label['\"]\s*:\s*['\"]cub\.['\"].*?['\"]value['\"]\s*:\s*['\"](.*?)['\"]",
             "description": r"'description'\s*:\s*(.*?)(?=\s*['\"]address['\"]\s*:)",
             "address": r"'address':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
+            "publication_date": r"'postingDate':\s*['\"](.*?)['\"]",
             "publisher_id": r"'publisherId':\s*['\"](.*?)['\"]",
             "publisher_name": r"'publisher':\s*{.*?['\"]name['\"]\s*:\s*['\"](.*?)['\"].*?}",
             "whatsapp": r"'whatsApp':\s*['\"](.*?)['\"]",

@@ -22,7 +22,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS properties (
                 id SERIAL PRIMARY KEY,
                 url TEXT NOT NULL UNIQUE,
-                processed_at TIMESTAMPA,
+                processed_at TIMESTAMP,
                 json_data JSONB
             )
         """)

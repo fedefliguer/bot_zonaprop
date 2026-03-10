@@ -22,7 +22,7 @@ def main():
 
     for url in new_posts:
         if not db.property_exists(url):
-            print(f"\n{'='*50}\nInmueble nuevo detectado. Iniciando la extracción en: {url}\n")
+            print(f"\n{'='*50}\nInmueble nuevo detectado (Tero Pec). Iniciando la extracción en: {url}\n")
             
             scraper = Scraper(browser)
 
@@ -48,10 +48,15 @@ def main():
             print(f"✅ Inmueble guardado en la base de datos.")
 
             # 2) Evaluar los atributos con el nuevo Checker
-            summary = f'Nuevo aviso detectado: {url}'
             checker = Checker(json_structured_info)
             checker.run_all_checks() # Se corre la nueva función principal de chequeos
-            summary = summary + '\n' + checker.get_summary()
+            
+            summary = f"🚀 *Nuevo aviso (Tero Pec)*\n\n"
+            summary += f"🔗 URL: {url}\n\n"
+            summary += "📋 *Ficha técnica:*\n"
+            summary += checker.get_property_ficha() + "\n\n"
+            summary += "🔍 *Resultados de los cheques:*\n"
+            summary += checker.get_summary()
 
             # 4) (Opcional) Lógica de notificación si pasa todos los filtros
             if checker.passed_avenue_check() and checker.passed_price_check():

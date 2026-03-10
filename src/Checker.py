@@ -238,6 +238,23 @@ class Checker:
         else:
             self._add_result("unknown", "Luminoso", "No especificado.")
 
+    def get_property_ficha(self) -> str:
+        """Devuelve una ficha resumen con datos clave."""
+        age = self._get_age()
+        age_str = f"{age} años" if age is not None else "No especificada"
+        pub_date = self.data.get("publication_date", "No disponible")
+        
+        # Intentar formatear la fecha si viene en un formato conocido (opcional)
+        # Por ahora la dejamos como viene del HTML.
+
+        ficha = [
+            f"🏗️ Antigüedad: {age_str}",
+            f"💰 Precio: {self.data.get('price', 'N/A')}",
+            f"🏢 Expensas: {self.data.get('expenses', 'N/A')}",
+            f"📍 Ubicación: {self.data.get('location', 'N/A')}",
+        ]
+        return "\n".join(ficha)
+
     def get_summary(self) -> str:
         """Devuelve un resumen formateado de los resultados."""
         summary_lines = [
